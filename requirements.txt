@@ -1,0 +1,7 @@
+curl_cffi
+ddddocr
+pycryptodome
+pillow
+numpy
+opencv-python-headless
+requests
