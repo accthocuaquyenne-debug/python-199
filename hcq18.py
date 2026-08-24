@@ -61,7 +61,7 @@ PROGRESS_EVERY = 50
 DEFAULT_TG_TOKEN = '8974102288:AAE3h0xrHuXQPIrddcRTQaqq4Jg9_pVGmQ0'
 DEFAULT_TG_CHAT_ID = '7348217229'
 
-# ============ SINGLETON OCR (Tiết kiệm RAM tối đa) ============
+# ============ SINGLETON OCR (Tiết kiệm RAM tối đa cho Railway Free) ============
 _ocr_instance = None
 _ocr_lock = threading.Lock()
 
@@ -213,6 +213,23 @@ class SiteAPI:
     def _sec(self) -> Dict[str, str]:
         return make_sec_headers(self.domain, self.ua)
 
+    def get_captcha_login(self) -> Optional[Dict[str, Any]]:
+        """Lấy captcha chuẩn từ API mới của nhà cái"""
+        try:
+            self.session.get(f"https://{self.domain}/", timeout=8)
+            r = self.session.get(f"https://{self.domain}/portalApi/1.0/login/captcha", timeout=8)
+            if r.status_code == 200:
+                res = r.json()
+                result_obj = res.get("Result", {})
+                if isinstance(result_obj, dict):
+                    return {
+                        "image": result_obj.get("Image"),
+                        "value": result_obj.get("EncryptValue") or result_obj.get("Value")
+                    }
+        except:
+            pass
+        return None
+
     def login(self, user: str, pw: str, code: str, enc_val: str) -> str:
         url = f"https://{self.domain}/api/0.0/login/login?app=1"
         body = {"account": user, "password": pw, "checkCode": code, "checkCodeEncrypt": enc_val, "fingerprint": self.fp, "usedApp": False}
@@ -259,13 +276,6 @@ class SiteAPI:
         except:
             pass
         return "0"
-
-    def get_captcha_login(self) -> Optional[Dict]:
-        try:
-            r = self.session.post(f"https://{self.domain}/api/0.0/Home/GetCaptchaForLogin", headers=self._sec(), timeout=8)
-            return r.json()
-        except:
-            return None
 
     def check_and_claim_lixi(self) -> List[Dict[str, Any]]:
         claimed = []
@@ -423,7 +433,7 @@ def main():
     writer_thread = threading.Thread(target=file_writer_worker, daemon=True)
     writer_thread.start()
 
-    # Danh sách các file part cần quét lần lượt
+    # Quét lần lượt các file part_1.txt, part_2.txt, part_3.txt
     part_files = ["part_1.txt", "part_2.txt", "part_3.txt"]
 
     for part_file in part_files:
